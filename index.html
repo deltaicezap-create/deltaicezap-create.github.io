@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Logger</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="duration-control">
+                <label class="duration-label">Interval Duration (seconds)</label>
+                <div class="duration-input-group">
+                    <button class="btn btn-duration" id="decrementBtn" type="button">-</button>
+                    <input type="number" id="durationInput" class="form-control duration-input" value="10" min="1" max="300">
+                    <button class="btn btn-duration" id="incrementBtn" type="button">+</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main content area -->
+        <main class="main-content">
+            <button class="floating-btn" id="playPauseBtn">
+                <span id="playPauseIcon">▶️</span>
+            </button>
+
+            <div class="session-info" id="sessionInfo">
+                <span id="sessionStatus">Ready to start</span>
+                <span id="sessionTime">00:00</span>
+            </div>
+
+            <!-- Progress indicator for current interval -->
+            <div class="interval-progress" id="intervalProgress">
+                <div class="progress-bar" id="progressBar"></div>
+                <div class="interval-info">
+                    <span id="intervalCount">Interval: 0</span>
+                    <span id="selectedColor">No color selected</span>
+                </div>
+            </div>
+
+            <!-- Table container -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Logged Cells</h3>
+                    <div class="table-stats" id="tableStats">
+                        Total cells: 0
+                    </div>
+                </div>
+                <div class="cell-grid" id="cellGrid">
+                    <!-- Cells will be dynamically generated here -->
+                </div>
+            </div>
+
+            <!-- Table control buttons -->
+            <div class="table-controls">
+                <button class="btn btn--secondary" id="exportBtn">📤 Export CSV</button>
+                <button class="btn btn--outline" id="clearBtn">🗑️ Clear Table</button>
+            </div>
+        </main>
+
+        <nav class="bottom-nav">
+            <button class="color-btn" data-color="red" style="background-color: #FFB3B3;">
+                <span class="sr-only">Pastel Red</span>
+            </button>
+            <button class="color-btn" data-color="yellow" style="background-color: #FFFF99;">
+                <span class="sr-only">Pastel Yellow</span>
+            </button>
+            <button class="color-btn" data-color="green" style="background-color: #B3FFB3;">
+                <span class="sr-only">Pastel Green</span>
+            </button>
+            <button class="color-btn" data-color="blue" style="background-color: #B3D9FF;">
+                <span class="sr-only">Pastel Blue</span>
+            </button>
+            <button class="color-btn" data-color="grey" style="background-color: #D3D3D3;">
+                <span class="sr-only">Grey</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
