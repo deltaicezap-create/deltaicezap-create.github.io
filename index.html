@@ -2,84 +2,628 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visual Logger</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Partial Interval Recording</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(0deg, #d9b5dd 0%, #c29dc2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        table {
+            border-collapse: separate;
+            border-spacing: 4px;
+        }
+
+        td {
+            width: 75px;
+            height: 75px;
+            background-color: #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        td.red {
+            background-color: #ff4757;
+            box-shadow: 0 2px 8px rgba(255, 71, 87, 0.4);
+        }
+
+        td.grey {
+            background-color: #e0e0e0;
+        }
+
+        td.active {
+            border: 3px solid #3498db;
+        }
+
+
+        td:hover {
+            transform: scale(1.05);
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .score-display {
+            font-weight: 600;
+            color: #333;
+            font-size: 1rem;
+            min-width: 100px;
+        }
+
+        .duration-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f5f5f5;
+            padding: 8px 12px;
+            border-radius: 25px;
+        }
+
+        .duration-control button {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: white;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+
+        .duration-control button:active {
+            transform: scale(0.95);
+        }
+
+        .duration-control button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .duration-input {
+            width: 60px;
+            text-align: center;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .duration-input:focus {
+            outline: none;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .start-btn:active {
+            transform: scale(0.95);
+        }
+
+        .start-btn.paused {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .start-btn.holding {
+            animation: hold-pulse 0.5s infinite;
+        }
+
+        @keyframes hold-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+
+        @keyframes slide-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #27ae60;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 200;
+            display: none;
+            animation: slide-down 0.3s ease;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        @keyframes slide-down {
+            from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            max-width: 300px;
+            width: 90%;
+            text-align: center;
+            animation: modal-pop 0.3s ease;
+        }
+
+        @keyframes modal-pop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal h3 {
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .modal p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn.cancel {
+            background: #ecf0f1;
+            color: #333;
+        }
+
+        .modal-btn.confirm {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .modal-btn:active {
+            transform: scale(0.98);
+        }
+
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: #3498db;
+            transition: width 0.1s linear;
+        }
+
+        @media (max-width: 400px) {
+            td {
+                width: 35px;
+                height: 35px;
+            }
+
+            .bottom-nav {
+                padding: 10px 15px;
+            }
+
+            .score-display {
+                font-size: 0.9rem;
+                min-width: 80px;
+            }
+
+            .start-btn {
+                padding: 10px 18px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container">
-        <header class="header">
-            <div class="duration-control">
-                <label class="duration-label">Interval Duration (seconds)</label>
-                <div class="duration-input-group">
-                    <button class="btn btn-duration" id="decrementBtn" type="button">-</button>
-                    <input type="number" id="durationInput" class="form-control duration-input" value="10" min="1" max="300">
-                    <button class="btn btn-duration" id="incrementBtn" type="button">+</button>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main content area -->
-        <main class="main-content">
-            <button class="floating-btn" id="playPauseBtn">
-                <span id="playPauseIcon">▶️</span>
-            </button>
-
-            <div class="session-info" id="sessionInfo">
-                <span id="sessionStatus">Ready to start</span>
-                <span id="sessionTime">00:00</span>
-            </div>
-
-            <!-- Progress indicator for current interval -->
-            <div class="interval-progress" id="intervalProgress">
-                <div class="progress-bar" id="progressBar"></div>
-                <div class="interval-info">
-                    <span id="intervalCount">Interval: 0</span>
-                    <span id="selectedColor">No color selected</span>
-                </div>
-            </div>
-
-            <!-- Table container -->
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>Logged Cells</h3>
-                    <div class="table-stats" id="tableStats">
-                        Total cells: 0
-                    </div>
-                </div>
-                <div class="cell-grid" id="cellGrid">
-                    <!-- Cells will be dynamically generated here -->
-                </div>
-            </div>
-
-            <!-- Table control buttons -->
-            <div class="table-controls">
-                <button class="btn btn--secondary" id="exportBtn">📤 Export CSV</button>
-                <button class="btn btn--outline" id="clearBtn">🗑️ Clear Table</button>
-            </div>
-        </main>
-
-        <nav class="bottom-nav">
-            <button class="color-btn" data-color="red" style="background-color: #FFB3B3;">
-                <span class="sr-only">Pastel Red</span>
-            </button>
-            <!--
-            <button class="color-btn" data-color="yellow" style="background-color: #FFFF99;">
-                <span class="sr-only">Pastel Yellow</span>
-            </button>
-            <button class="color-btn" data-color="green" style="background-color: #B3FFB3;">
-                <span class="sr-only">Pastel Green</span>
-            </button>
-            <button class="color-btn" data-color="blue" style="background-color: #B3D9FF;">
-                <span class="sr-only">Pastel Blue</span>
-            </button>
-            -->
-            <button class="color-btn" data-color="grey" style="background-color: #D3D3D3;">
-                <span class="sr-only">Grey</span>
-            </button>
-        </nav>
+    <div class="container">
+        <h1>Partial Interval Recording</h1>
+        <div class="table-container">
+            <table id="grid">
+                <!-- 7x6 grid generated by JS -->
+            </table>
+        </div>
     </div>
 
-    <script src="app.js"></script>
+    <div class="notification" id="notification">
+        ✅ Table complete!
+    </div>
+
+
+    <div class="bottom-nav">
+        <div class="score-display" id="scoreDisplay">Score: --</div>
+
+        <div class="duration-control">
+            <button id="decrementBtn" onclick="changeDuration(-1)">−</button>
+            <input type="text" class="duration-input" id="durationInput" value="20" readonly>
+            <button id="incrementBtn" onclick="changeDuration(1)">+</button>
+        </div>
+
+        <button class="start-btn" id="startBtn" onmousedown="startHold()" onmouseup="endHold()" onmouseleave="endHold()" ontouchstart="startHold()" ontouchend="endHold()">
+            Start
+        </button>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h3>🗑️ Delete Table?</h3>
+            <p>Are you sure you want to clear the entire table and start over?</p>
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn confirm" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ROWS = 6;
+        const COLS = 7;
+        let grid = [];
+        let currentCell = 0;
+        let isRunning = false;
+        let isPaused = false;
+        let duration = 20;
+        let timer = null;
+        let cellTimer = null;
+        let cellStartTime = null;
+        let holdTimer = null;
+        let isHolding = false;
+        let completed = false;
+
+        // Initialize grid
+        function initGrid() {
+            const table = document.getElementById('grid');
+            table.innerHTML = '';
+            grid = [];
+
+            for (let i = 0; i < ROWS; i++) {
+                const row = document.createElement('tr');
+                const rowData = [];
+
+                for (let j = 0; j < COLS; j++) {
+                    const cell = document.createElement('td');
+                    cell.className = 'grey';
+                    cell.dataset.index = i * COLS + j;
+                    cell.onclick = () => cellClick(parseInt(cell.dataset.index));
+
+                    const progressBar = document.createElement('div');
+                    progressBar.className = 'progress-bar';
+                    progressBar.style.width = '0%';
+                    cell.appendChild(progressBar);
+
+                    row.appendChild(cell);
+                    rowData.push({ element: cell, isRed: false, progressBar: progressBar });
+                }
+
+                table.appendChild(row);
+                grid.push(...rowData);
+            }
+        }
+
+        function cellClick(index) {
+            if (!isRunning || isPaused || completed) return;
+            if (index !== currentCell) return;
+
+            const cell = grid[index];
+            cell.isRed = !cell.isRed;
+            cell.element.className = cell.isRed ? 'red active' : 'grey active';
+        }
+
+        function changeDuration(delta) {
+            if (isRunning && !isPaused) return;
+            duration = Math.max(1, duration + delta);
+            document.getElementById('durationInput').value = duration;
+        }
+
+        function updateDurationControls() {
+            const disabled = isRunning && !isPaused;
+            document.getElementById('decrementBtn').disabled = disabled;
+            document.getElementById('incrementBtn').disabled = disabled;
+        }
+
+        function startHold() {
+            if (completed) return;
+            isHolding = true;
+            document.getElementById('startBtn').classList.add('holding');
+
+            holdTimer = setTimeout(() => {
+                if (isHolding) {
+                    showModal();
+                    endHold();
+                }
+            }, 5000);
+        }
+
+        function endHold() {
+            isHolding = false;
+            document.getElementById('startBtn').classList.remove('holding');
+            if (holdTimer) {
+                clearTimeout(holdTimer);
+                holdTimer = null;
+            }
+
+            // If it was a quick tap (not a hold), toggle start/pause
+            if (!document.getElementById('modalOverlay').classList.contains('show')) {
+                toggleStartPause();
+            }
+        }
+
+        function toggleStartPause() {
+            if (completed) {
+                resetTable();
+                return;
+            }
+
+            const btn = document.getElementById('startBtn');
+
+            if (!isRunning) {
+                // Start
+                isRunning = true;
+                isPaused = false;
+                btn.textContent = 'Pause';
+                btn.classList.add('paused');
+                startFilling();
+            } else if (!isPaused) {
+                // Pause
+                isPaused = true;
+                btn.textContent = 'Resume';
+                btn.classList.remove('paused');
+                pauseFilling();
+            } else {
+                // Resume
+                isPaused = false;
+                btn.textContent = 'Pause';
+                btn.classList.add('paused');
+                resumeFilling();
+            }
+
+            updateDurationControls();
+        }
+
+        function startFilling() {
+            currentCell = 0;
+            highlightCell(currentCell);
+            startCellTimer();
+        }
+
+        function startCellTimer() {
+            cellStartTime = Date.now();
+
+            cellTimer = setInterval(() => {
+                if (isPaused) return;
+
+                const elapsed = (Date.now() - cellStartTime) / 1000;
+                const remaining = Math.max(0, duration - elapsed);
+                const progress = (elapsed / duration) * 100;
+
+                // Update progress bar
+                if (grid[currentCell]) {
+                    grid[currentCell].progressBar.style.width = progress + '%';
+                }
+
+                if (remaining <= 0) {
+                    moveToNextCell();
+                }
+            }, 50);
+        }
+
+        function moveToNextCell() {
+            // Remove highlight from current cell
+            if (grid[currentCell]) {
+                grid[currentCell].element.classList.remove('active');
+                grid[currentCell].progressBar.style.width = '0%';
+
+                // Ensure grey if not red
+                if (!grid[currentCell].isRed) {
+                    grid[currentCell].element.className = 'grey';
+                }
+            }
+
+            currentCell++;
+
+            if (currentCell >= grid.length) {
+                completeTable();
+            } else {
+                highlightCell(currentCell);
+                cellStartTime = Date.now();
+            }
+        }
+
+        function highlightCell(index) {
+            if (grid[index]) {
+                const cell = grid[index];
+                cell.element.classList.add('active');
+                if (!cell.isRed) {
+                    cell.element.classList.add('grey');
+                }
+            }
+        }
+
+        function pauseFilling() {
+            if (cellTimer) {
+                clearInterval(cellTimer);
+                cellTimer = null;
+            }
+        }
+
+        function resumeFilling() {
+            startCellTimer();
+        }
+
+        function completeTable() {
+            isRunning = false;
+            isPaused = false;
+            completed = true;
+
+            if (cellTimer) {
+                clearInterval(cellTimer);
+                cellTimer = null;
+            }
+
+            const btn = document.getElementById('startBtn');
+            btn.textContent = 'Reset';
+            btn.classList.remove('paused');
+
+            updateDurationControls();
+            calculateAndDisplayScore();
+            showExportOptions();
+        }
+
+        function calculateAndDisplayScore() {
+            const redCount = grid.filter(cell => cell.isRed).length;
+            const total = grid.length;
+            const score = ((redCount / total) * 100).toFixed(2);
+            document.getElementById('scoreDisplay').textContent = `Score: ${score}%`;
+        }
+
+
+        function resetTable() {
+            completed = false;
+            currentCell = 0;
+            isRunning = false;
+            isPaused = false;
+
+            document.getElementById('startBtn').textContent = 'Start';
+            document.getElementById('scoreDisplay').textContent = 'Score: --';
+            document.getElementById('exportBtn').classList.remove('show');
+            document.getElementById('notification').classList.remove('show');
+
+            initGrid();
+            updateDurationControls();
+        }
+
+        function showModal() {
+            document.getElementById('modalOverlay').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('show');
+        }
+
+        function confirmDelete() {
+            closeModal();
+
+            // Stop everything
+            if (cellTimer) {
+                clearInterval(cellTimer);
+                cellTimer = null;
+            }
+
+            resetTable();
+        }
+
+
+        // Prevent double-tap zoom on mobile
+        document.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.target.click();
+        }, { passive: false });
+
+        // Initialize
+        initGrid();
+        updateDurationControls();
+    </script>
 </body>
 </html>
